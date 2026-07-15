@@ -1,12 +1,37 @@
+const forms = {
+  "первый": "король",
+  "первого": "короля",
+  "первому": "королю",
+  "первым": "королём",
+  "первом": "короле",
+  "первая": "королева",
+  "первой": "королевы",
+  "первую": "королеву",
+  "первые": "короли",
+  "первых": "королей",
+  "первыми": "королями"
+};
+
+function getReplacement(word) {
+  const replacement = forms[word.toLowerCase()];
+  if (!replacement) return word;
+
+  if (word === word.toUpperCase()) {
+    return replacement.toUpperCase();
+  }
+
+  if (word === word.toLowerCase()) {
+    return replacement;
+  }
+
+  return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+}
+
 function process(node) {
   if (node.nodeType === Node.TEXT_NODE) {
     node.textContent = node.textContent.replace(
-      /(?<![А-Яа-яЁёA-Za-z0-9_])первый(?!\s+король)(?![А-Яа-яЁёA-Za-z0-9_])/gi,
-      m => m === m.toUpperCase()
-        ? m + " КОРОЛЬ"
-        : m === m.toLowerCase()
-          ? m + " король"
-          : m + " Король"
+      /(?<![А-Яа-яЁёA-Za-z0-9_])(первый|первого|первому|первым|первом|первая|первой|первую|первые|первых|первыми)(?!\s+(король|короля|королю|королём|короле|королева|королевы|королеву|короли|королей|королями))(?![А-Яа-яЁёA-Za-z0-9_])/gi,
+      match => `${match} ${getReplacement(match)}`
     );
     return;
   }
@@ -19,11 +44,24 @@ function process(node) {
   }
 }
 
-process(document.body);
+function start() {
+  if (!document.body) {
+    requestAnimationFrame(start);
+    return;
+  }
 
-new MutationObserver(ms => {
-  ms.forEach(m => m.addedNodes.forEach(process));
-}).observe(document.body, {
-  childList: true,
-  subtree: true
-});
+  process(document.body);
+
+  new MutationObserver(mutations => {
+    for (const mutation of mutations) {
+      for (const node of mutation.addedNodes) {
+        process(node);
+      }
+    }
+  }).observe(document.body, {
+    childList: true,
+    subtree: true
+  });
+}
+
+start();
