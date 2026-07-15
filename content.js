@@ -4,35 +4,50 @@ const forms = {
   "первому": "королю",
   "первым": "королём",
   "первом": "короле",
-  "первая": "королева",
-  "первой": "королевы",
-  "первую": "королеву",
+
+  "первая": "король",
+  "первой": "короля",
+  "первую": "короля",
+
+  "первое": "говно",
+
   "первые": "короли",
   "первых": "королей",
   "первыми": "королями"
 };
 
 function getReplacement(word) {
-  const replacement = forms[word.toLowerCase()];
-  if (!replacement) return word;
+  const rep = forms[word.toLowerCase()];
+  if (!rep) return null;
 
-  if (word === word.toUpperCase()) {
-    return replacement.toUpperCase();
-  }
+  if (word === word.toUpperCase()) return rep.toUpperCase();
+  if (word === word.toLowerCase()) return rep;
 
-  if (word === word.toLowerCase()) {
-    return replacement;
-  }
-
-  return replacement.charAt(0).toUpperCase() + replacement.slice(1);
+  return rep[0].toUpperCase() + rep.slice(1);
 }
 
 function process(node) {
   if (node.nodeType === Node.TEXT_NODE) {
-    node.textContent = node.textContent.replace(
-      /(?<![А-Яа-яЁёA-Za-z0-9_])(первый|первого|первому|первым|первом|первая|первой|первую|первые|первых|первыми)(?!\s+(король|короля|королю|королём|короле|королева|королевы|королеву|короли|королей|королями))(?![А-Яа-яЁёA-Za-z0-9_])/gi,
-      match => `${match} ${getReplacement(match)}`
+    if (node.parentNode?.dataset?.processed) return;
+
+    const oldText = node.textContent;
+
+    const newText = oldText.replace(
+      /перв(ый|ого|ому|ым|ом|ая|ой|ую|ое|ые|ых|ыми)(?!\s+(король|короля|королю|королём|короле|короли|королей|королями|говно))/gi,
+      match => {
+        const rep = getReplacement(match);
+        if (!rep) return match;
+        return `${match} ${rep}`;
+      }
     );
+
+    if (newText !== oldText) {
+      const span = document.createElement("span");
+      span.dataset.processed = "true";
+      span.textContent = newText;
+      node.replaceWith(span);
+    }
+
     return;
   }
 
@@ -44,24 +59,13 @@ function process(node) {
   }
 }
 
-function start() {
-  if (!document.body) {
-    requestAnimationFrame(start);
-    return;
-  }
+process(document.body);
 
-  process(document.body);
-
-  new MutationObserver(mutations => {
-    for (const mutation of mutations) {
-      for (const node of mutation.addedNodes) {
-        process(node);
-      }
-    }
-  }).observe(document.body, {
-    childList: true,
-    subtree: true
+new MutationObserver(mutations => {
+  mutations.forEach(mutation => {
+    mutation.addedNodes.forEach(process);
   });
-}
-
-start();
+}).observe(document.body, {
+  childList: true,
+  subtree: true
+});
